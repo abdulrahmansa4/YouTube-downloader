@@ -128,6 +128,7 @@ class VideoDownloaderApp:
         self.thumbnail_image = None
         self.current_url = ""
         self.format_cache = {}  # Add this line
+        self._download_process = None
 
         # Try to auto-fill URL from clipboard
         try:
@@ -726,6 +727,7 @@ class VideoDownloaderApp:
             self.speed_var.set("")
             self.toggle_controls(False)
 
+            self._download_process = None
             self.download_thread = threading.Thread(
                 target=self._download_thread,
                 args=(cmd,),
@@ -740,7 +742,7 @@ class VideoDownloaderApp:
 
     def _download_thread(self, cmd):
         try:
-            process = subprocess.Popen(
+            self._download_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -748,6 +750,7 @@ class VideoDownloaderApp:
                 bufsize=1,
                 universal_newlines=True
             )
+            process = self._download_process
             while True:
                 line = process.stdout.readline()
                 if not line:
@@ -796,7 +799,11 @@ class VideoDownloaderApp:
     
     def stop_download(self):
         if self.download_thread and self.download_thread.is_alive():
-            # This is a simplified approach - in real app you'd need to kill the subprocess
+            if self._download_process and self._download_process.poll() is None:
+                try:
+                    self._download_process.terminate()
+                except Exception:
+                    pass
             self.append_output("\n⚠️ Download stopped by user\n")
             self.update_status("Stopped")
             self.progress_bar['value'] = 0
