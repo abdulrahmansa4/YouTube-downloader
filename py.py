@@ -128,6 +128,14 @@ class VideoDownloaderApp:
         self.thumbnail_image = None
         self.current_url = ""
         self.format_cache = {}  # Add this line
+
+        # Try to auto-fill URL from clipboard
+        try:
+            clipboard = self.app.clipboard_get()
+            if clipboard and validate_url(clipboard):
+                self.url_entry.insert(0, clipboard)
+        except:
+            pass
         
     def setup_url_section(self):
         url_frame = ttk.LabelFrame(self.main_frame, text="Video URL", padding=10)
@@ -152,7 +160,7 @@ class VideoDownloaderApp:
         self.history_menu = tk.Menu(self.history_btn, tearoff=0)
         self.history_btn['menu'] = self.history_menu
         self.history_btn.pack(side=tk.RIGHT, padx=5)
-        self.update_history_menu()
+        self.setup_history_menu()
         
         # Fetch button
         ttk.Button(
@@ -745,6 +753,14 @@ class VideoDownloaderApp:
                 if not line:
                     break
                 self.app.after(0, self.append_output, line)
+                import re
+                progress_match = re.search(r'\[download\]\s+(\d+\.\d+)%.*?at\s+([^\s]+).*?ETA\s+([^\s]+)', line)
+                if progress_match:
+                    percent = float(progress_match.group(1))
+                    speed = progress_match.group(2)
+                    eta = progress_match.group(3)
+                    self.app.after(0, self.progress_bar.config, {"value": percent})
+                    self.app.after(0, self.speed_var.set, f"{speed} | ETA: {eta}")
             process.wait()
             if process.returncode == 0:
                 self.app.after(0, self.append_output, "\n✅ Download completed successfully!\n")
@@ -888,15 +904,22 @@ class VideoDownloaderApp:
             if len(self.config["history"]) > 10:
                 self.config["history"] = self.config["history"][:10]
             save_config(self.config)
-            self.update_history_menu()
+            self.setup_history_menu()
     
-    def update_history_menu(self):
+    def setup_history_menu(self):
         self.history_menu.delete(0, tk.END)
         for url in self.config["history"]:
             self.history_menu.add_command(
                 label=url[:50] + ("..." if len(url) > 50 else ""),
                 command=lambda u=url: self.load_from_history(u)
             )
+        self.history_menu.add_separator()
+        self.history_menu.add_command(label="Clear History", command=self.clear_history)
+    
+    def clear_history(self):
+        self.config["history"] = []
+        save_config(self.config)
+        self.setup_history_menu()
     
     def load_from_history(self, url):
         self.url_entry.delete(0, tk.END)
@@ -1207,6 +1230,11 @@ class VideoDownloaderApp:
             self.video_only_combobox.config(state="readonly")
             self.audio_only_combobox.config(state="readonly")
 
+    def on_url_drop(self, event):
+        url = event.data.strip()
+        self.url_entry.delete(0, tk.END)
+        self.url_entry.insert(0, url)
+
 # -------- Main Execution --------
 if __name__ == "__main__":
     try:
@@ -1217,3 +1245,20 @@ if __name__ == "__main__":
         tb = traceback.format_exc()
         messagebox.showerror("Fatal Error", f"The application crashed:\n{str(e)}\n\n{tb}")
         sys.exit(1)
+
+# Add this utility function:
+def add_tooltip(widget, text):
+    def on_enter(e):
+        widget.tooltip = tk.Toplevel(widget)
+        widget.tooltip.wm_overrideredirect(True)
+        widget.tooltip.wm_geometry(f"+{e.x_root+10}+{e.y_root+10}")
+        label = tk.Label(widget.tooltip, text=text, background="#ffffe0", relief="solid", borderwidth=1)
+        label.pack()
+    def on_leave(e):
+        if hasattr(widget, 'tooltip'):
+            widget.tooltip.destroy()
+    widget.bind("<Enter>", on_enter)
+    widget.bind("<Leave>", on_leave)
+
+# Example usage after creating a button:
+add_tooltip(self.url_entry, "Paste a video URL here")
