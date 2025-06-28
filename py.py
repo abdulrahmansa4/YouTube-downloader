@@ -721,8 +721,8 @@ class VideoDownloaderApp:
 
             self.update_status("Starting download...")
             self.append_output(f"⬇️ Downloading: {url}\nFormat: {format_code}\n")
-            self.progress_bar.config(mode="indeterminate")
-            self.progress_bar.start(10)
+            self.progress_bar.config(mode="determinate", maximum=100, value=0)
+            self.progress_bar.update()
             self.speed_var.set("")
             self.toggle_controls(False)
 
