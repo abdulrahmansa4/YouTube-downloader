@@ -1,5 +1,7 @@
 # Video Downloader
 
+![App Preview](preview.png)
+
 ## Overview
 The Video Downloader is a Python application that allows users to download videos from various supported websites. It provides a user-friendly interface built with Tkinter and supports multiple formats and quality preferences.
 
