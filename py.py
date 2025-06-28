@@ -79,6 +79,19 @@ def get_video_thumbnail(url):
     except:
         return None
 
+def add_tooltip(widget, text):
+    def on_enter(e):
+        widget.tooltip = tk.Toplevel(widget)
+        widget.tooltip.wm_overrideredirect(True)
+        widget.tooltip.wm_geometry(f"+{e.x_root+10}+{e.y_root+10}")
+        label = tk.Label(widget.tooltip, text=text, background="#ffffe0", relief="solid", borderwidth=1)
+        label.pack()
+    def on_leave(e):
+        if hasattr(widget, 'tooltip'):
+            widget.tooltip.destroy()
+    widget.bind("<Enter>", on_enter)
+    widget.bind("<Leave>", on_leave)
+
 # -------- Main Application --------
 class VideoDownloaderApp:
     def __init__(self):
@@ -171,6 +184,10 @@ class VideoDownloaderApp:
             command=self.fetch_formats,
             width=12
         ).pack(side=tk.RIGHT, padx=5)
+        
+        # Tooltips
+        add_tooltip(self.url_entry, "Paste a video URL here")
+        add_tooltip(self.history_btn, "Show download history")
     
     def setup_format_section(self):
         format_frame = ttk.LabelFrame(self.main_frame, text="Download Options", padding=10)
@@ -279,6 +296,9 @@ class VideoDownloaderApp:
 
         format_frame.columnconfigure(1, weight=1)
 
+        # Tooltips
+        add_tooltip(self.format_combobox, "Select the format to download")
+    
     def on_merge_custom_toggle(self):
         if self.merge_custom_var.get():
             self.format_combobox.config(state="disabled")
@@ -344,42 +364,53 @@ class VideoDownloaderApp:
             font=('Arial', 9),
             bootstyle=SECONDARY
         ).pack(side=tk.RIGHT)
+
+        # Tooltips
+        add_tooltip(self.progress_bar, "Shows download progress")
     
     def setup_action_buttons(self):
         btn_frame = ttk.Frame(self.main_frame)
         btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
 
-        ttk.Button(
+        self.download_btn = ttk.Button(
             btn_frame, 
             text="Download", 
             bootstyle=SUCCESS,
             command=self.download_video,
             width=15
-        ).pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        )
+        self.download_btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        add_tooltip(self.download_btn, "Start downloading the selected video")
 
-        ttk.Button(
+        self.stop_btn = ttk.Button(
             btn_frame, 
             text="Stop", 
             bootstyle=DANGER,
             command=self.stop_download,
             width=15
-        ).pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        )
+        self.stop_btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        add_tooltip(self.stop_btn, "Stop the current download")
 
-        ttk.Button(
+        self.open_folder_btn = ttk.Button(
             btn_frame, 
             text="Open Folder", 
             bootstyle=INFO,
             command=self.open_download_folder,
             width=15
-        ).pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        )
+        self.open_folder_btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        add_tooltip(self.open_folder_btn, "Open the download folder")
 
-        ttk.Button(
+        self.clear_btn = ttk.Button(
             btn_frame, 
             text="Clear", 
             bootstyle=WARNING,
             command=self.clear_all,
             width=15
-        ).pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        )
+        self.clear_btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        add_tooltip(self.clear_btn, "Clear all fields")
     
     def setup_menu(self):
         menubar = tk.Menu(self.app)
@@ -870,6 +901,8 @@ class VideoDownloaderApp:
         state = tk.NORMAL if enable else tk.DISABLED
         self.url_entry.config(state=state)
         self.format_combobox.config(state=state)
+        self.download_btn.config(state=state)
+        self.stop_btn.config(state=tk.NORMAL if not enable else tk.DISABLED)
     
     def update_status(self, message):
         self.status_var.set(message)
@@ -1252,20 +1285,3 @@ if __name__ == "__main__":
         tb = traceback.format_exc()
         messagebox.showerror("Fatal Error", f"The application crashed:\n{str(e)}\n\n{tb}")
         sys.exit(1)
-
-# Add this utility function:
-def add_tooltip(widget, text):
-    def on_enter(e):
-        widget.tooltip = tk.Toplevel(widget)
-        widget.tooltip.wm_overrideredirect(True)
-        widget.tooltip.wm_geometry(f"+{e.x_root+10}+{e.y_root+10}")
-        label = tk.Label(widget.tooltip, text=text, background="#ffffe0", relief="solid", borderwidth=1)
-        label.pack()
-    def on_leave(e):
-        if hasattr(widget, 'tooltip'):
-            widget.tooltip.destroy()
-    widget.bind("<Enter>", on_enter)
-    widget.bind("<Leave>", on_leave)
-
-# Example usage after creating a button:
-add_tooltip(self.url_entry, "Paste a video URL here")
